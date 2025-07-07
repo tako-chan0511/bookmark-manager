@@ -2,29 +2,31 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
-import commonjs from '@rollup/plugin-commonjs'
+// import commonjs from '@rollup/plugin-commonjs' // ★削除: @rollup/plugin-commonjs は削除★
+import commonjsPlugin from 'vite-plugin-commonjs' // ★追加: vite-plugin-commonjs をインポート★
 
 export default defineConfig({
-  // ★修正: base: '.' を base: './' に変更★
-  base: './', // 開発時もデプロイ時も相対パスを基準にする
+  base: './', // または '/' (デプロイ環境による)
   
   plugins: [
     vue(),
-    commonjs({
-      include: /node_modules/,
-    }),
+    // ★修正: @rollup/plugin-commonjs の代わりに vite-plugin-commonjs を使用★
+    commonjsPlugin(), 
   ],
   
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
+    // mainFields は維持 (ESMを優先するため)
+    mainFields: ['module', 'jsnext:main', 'jsnext', 'main'], 
   },
   
   optimizeDeps: {
     include: [
-      'leaflet', 
-      '@supabase/supabase-js', // ★追加: supabase-js を pre-bundle 対象に含める★
+      'leaflet',
+      '@supabase/supabase-js', 
+      '@supabase/postgrest-js', // これも pre-bundle 対象に含める
       'object-assign', 
       'geojson-equality',
       'earcut',
@@ -34,10 +36,13 @@ export default defineConfig({
   },
   
   build: {
-    commonjsOptions: {
-      include: /node_modules/,
-      transformMixedEsModules: true,
-    },
+    // commonjsOptions は vite-plugin-commonjs が管理するため、ここでは不要
+    // commonjsOptions: { // ★削除: commonjsOptions は削除★
+    //   include: /node_modules/,
+    //   transformMixedEsModules: true,
+    // },
+    
+    // rollupOptions は削除のままでOK
   },
   
   server: {

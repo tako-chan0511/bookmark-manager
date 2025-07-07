@@ -1,16 +1,36 @@
 {
   "compilerOptions": {
+    "target": "ESNext", // ★追加: 最新のECMAScript機能を使用可能にする
+    "useDefineForClassFields": true, // ★追加: クラスフィールドの定義を標準に合わせる
+    "module": "ESNext", // ★修正: "ESNext" に変更 (import.meta.env をサポート)
+    "lib": ["ESNext", "DOM", "DOM.Iterable"], // ★追加: 利用可能なJavaScriptライブラリの型定義
+    "skipLibCheck": true, // ★追加: node_modules内の型チェックをスキップ (多くのライブラリエラー回避)
+
+    /* Bundler mode (Viteの推奨設定) */
+    "moduleResolution": "bundler", // ★追加: モジュール解決戦略
+    "allowImportingTsExtensions": true, // ★追加: .ts 拡張子のインポートを許可
+    "resolveJsonModule": true, // ★追加: .json ファイルのインポートを許可
+    "isolatedModules": true, // ★追加: 各ファイルが独立したモジュールであることを保証
+    "noEmit": true, // TypeScriptがJavaScriptファイルを生成しないようにする (Viteが担当)
+    "jsx": "preserve", // JSXをそのままにする (Reactなどで使用)
+
+    /* Linting (厳格な型チェックとコード品質) */
+    "strict": true, // ★追加: 厳格な型チェックを有効化
+    "noUnusedLocals": true, // ★追加: 未使用のローカル変数を警告
+    "noUnusedParameters": true, // ★追加: 未使用の関数パラメータを警告
+    "noFallthroughCasesInSwitch": true, // ★追加: switch文のフォールスルーを警告
+
+    // baseUrl と paths は既存のまま
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },
-    "types": ["vite/client", "node"],
-
-    // ここを追加：
-    "noEmit": true
+    "types": ["vite/client", "node"] // "node" は Node.js 環境の型定義
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue"
-  ]
+  ],
+  // "references" は通常不要なので削除
+  "references": [] 
 }
