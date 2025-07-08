@@ -1,26 +1,43 @@
 <template>
-  <div id="app-container">
-    <AuthForm />
-    </div>
+  <div id="app">
+    <header class="app-header">
+      <nav>
+        <router-link to="/">Home</router-link>
+        <router-link v-if="!user" to="/login">Login</router-link>
+        <span v-else class="user-info">
+          ようこそ、{{ user.email }} さん
+          <button @click="signOut">ログアウト</button>
+        </span>
+      </nav>
+    </header>
+    <main>
+      <router-view />
+    </main>
+  </div>
 </template>
 
 <script setup lang="ts">
-import AuthForm from '@/components/AuthForm.vue';
+import { useAuth } from '@/supabase/useAuth'
+const { user, signOut } = useAuth()
 </script>
 
-<style>
-/* グローバルなスタイル */
-#app-container {
-  font-family: 'Inter', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 20px;
+<style scoped>
+.app-header {
+  padding: 0.5rem 1rem;
+  background: #f5f5f5;
+}
+nav {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  min-height: 100vh;
-  background-color: #f0f2f5;
+  gap: 1rem;
+}
+.user-info {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+button {
+  cursor: pointer;
 }
 </style>

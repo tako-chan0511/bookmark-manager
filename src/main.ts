@@ -1,8 +1,10 @@
 // src/main.ts
 import { createApp } from 'vue'
 import App from './App.vue'
+import router from './router'        // ← この行を追加
 
-// グローバルCSSが必要な場合はここでインポート (例: ベーススタイルなど)
-// import './assets/main.css'; // Vite のデフォルトで生成される場合あり
+// import './assets/main.css'           // 必要に応じてグローバルCSS
 
-createApp(App).mount('#app')
+const app = createApp(App)
+app.use(router)                      // ← ルーターを登録
+app.mount('#app')
