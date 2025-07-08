@@ -7,4 +7,4 @@ Learn more about the recommended Project Setup and IDE Support in the [Vue Docs 
 ## 🎮 操作方法
 詳細は [操作手順はこちら](docs/INSTRUCTIONS.md) をご覧ください。
 
-詳細は [環境構築と実装と実装手順はこちら](docs/ENVIRONMENTS.md) をご覧ください
+詳細は [環境構築と実装と実装手順はこちら](docs/ENVIRONMENTS.md) をご覧ください。
