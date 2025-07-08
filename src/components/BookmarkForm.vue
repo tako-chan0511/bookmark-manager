@@ -57,22 +57,23 @@ const submitting  = ref(false)
 async function addBookmark() {
   submitting.value = true
 
-  // 1) ブックマーク本体を追加してIDを取得
-  const { data: [bm], error: err1 } = await supabase
-    .from('bookmarks')
+// 1) ブックマーク登録＆ID取得
+  const insertRes = await supabase
+    .from("bookmarks")
     .insert({
       title:       title.value,
       url:         url.value,
-      image_url:   image_url.value   || null,
+      image_url:   image_url.value || null,
       description: description.value || null,
     })
-    .select('id')
+    .select("id");
+  const err1 = insertRes.error;
+  const bm = insertRes.data?.[0];
   if (err1 || !bm) {
-    console.error('ブックマーク追加エラー', err1)
-    submitting.value = false
-    return
+    console.error("追加エラー:", err1);
+    submitting.value = false;
+    return;
   }
-
   // 2) カンマ区切り文字列 → string[] に変換
   const names = tagString.value
     .split(',')
