@@ -1,11 +1,17 @@
 {
   "compilerOptions": {
+    "target": "esnext",                     // 最新のES機能を許容
+    "module": "esnext",                     // import.meta を使えるモジュール形式
+    "moduleResolution": "node",             // Node.js風のモジュール解決
+    "jsx": "preserve",                      // VueのJSX(<>記法)はそのまま保持
+
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },
-    "types": ["vite/client", "node"],
 
-    // ここを追加：
-    "noEmit": true
+    "strict": true,                           // 厳密な型チェックを有効化
+    "skipLibCheck": true,                     // 外部ライブラリの型チェックを省略
+    "noEmit": true,                           // トランスパイル結果を出力しない
+    "types": ["vite/client", "node"]      // import.meta.env と Node型
   },
   "include": [
     "src/**/*.ts",
