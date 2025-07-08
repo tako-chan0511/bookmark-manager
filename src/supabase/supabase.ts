@@ -1,31 +1,20 @@
 // src/supabase.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-// 環境変数の読み込み（VITE_ プレフィックス必須）
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl       = import.meta.env.VITE_SUPABASE_URL!
+const supabaseAnonKey   = import.meta.env.VITE_SUPABASE_ANON_KEY!
 
-// 開発時に .env の設定漏れを検出
-if (import.meta.env.DEV) {
-  if (!supabaseUrl) {
-    console.error('[Supabase] VITE_SUPABASE_URL が設定されていません');
-  }
-  if (!supabaseAnonKey) {
-    console.error('[Supabase] VITE_SUPABASE_ANON_KEY が設定されていません');
-  }
-}
-
-// Supabase クライアントの初期化
 export const supabase = createClient(
   supabaseUrl,
   supabaseAnonKey,
   {
-    // セッション永続化などのオプション設定
     auth: {
+      // リフレッシュトークンによる自動更新を止める
+      autoRefreshToken: false,
+      // セッションはローカルストレージに残す（そのまま）
       persistSession: true,
-      detectSessionInUrl: true
+      // URL のハッシュからセッションを拾う機能を off にするなら
+      detectSessionInUrl: false,
     }
   }
-);
-
-export type SupabaseClient = typeof supabase;
+)
