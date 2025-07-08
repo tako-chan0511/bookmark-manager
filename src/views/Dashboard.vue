@@ -2,7 +2,7 @@
   <div class="dashboard">
     <h1>My Bookmarks</h1>
     <BookmarkForm @added="refresh" />
-    <BookmarkList :reloadFlag="reloadFlag" @deleted="refresh" />
+    <BookmarkList :reloadFlag="reloadFlag" @deleted="refresh" @updated="refresh" />
   </div>
 </template>
 
