@@ -1,32 +1,36 @@
 // src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuth } from '@/supabase/useAuth'      // ← これを追加
 import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
-import Dashboard from '@/views/Dashboard.vue'  // 新規追加
+import Dashboard from '@/views/Dashboard.vue'
+import { supabase } from '@/supabase/supabase'
 
 const routes = [
-  { path: '/',    name: 'Home',     component: Home },
-  { path: '/login', name: 'Login',  component: Login },
-  // ログイン必須ダッシュボード
-  { 
-    path: '/dashboard', 
-    name: 'Dashboard', 
-    component: Dashboard, 
-    meta: { requiresAuth: true } 
-  },
+  { path: '/',     name: 'Home',     component: Home },
+  { path: '/login',name: 'Login',    component: Login },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: Dashboard,
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
+  routes
 })
 
-// ナビゲーションガード例：認証済みユーザーのみ /dashboard へ
-router.beforeEach((to, from, next) => {
-  const { user } = useAuth()  // supabase/useAuth.ts より
-  if (to.meta.requiresAuth && !user.value) {
-    next({ path: '/login' })
+// グローバルガード
+router.beforeEach(async (to, from, next) => {
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (to.meta.requiresAuth && !session) {
+    // 未ログインならログイン画面へ
+    next({ name: 'Login' })
+  } else if ((to.name === 'Login' || to.name === 'Home') && session) {
+    // ログイン済み／セッションありならダッシュボードへ
+    next({ name: 'Dashboard' })
   } else {
     next()
   }

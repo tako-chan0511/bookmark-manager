@@ -12,7 +12,7 @@ export const supabase = createClient(
       // リフレッシュトークンによる自動更新を止める
       autoRefreshToken: false,
       // セッションはローカルストレージに残す（そのまま）
-      persistSession: true,
+      persistSession: false,
       // URL のハッシュからセッションを拾う機能を off にするなら
       detectSessionInUrl: false,
     }
