@@ -122,25 +122,27 @@ input, textarea {
   border-color: #8ebfef;
   cursor: not-allowed;
 }
-
 /* ダークモード調整 */
-:global([data-theme="dark"]) input,
-:global([data-theme="dark"]) textarea {
-  background: #2a2a2a;
-  border-color: #444;
-  color: #eee;
-}
-:global([data-theme="dark"]) .btn--primary {
-  background: #3399ff;
-  border-color: #3399ff;
-  color: #fff;
-}
-:global([data-theme="dark"]) .btn--primary:hover:not(:disabled) {
-  background: #1f7cd6;
-  border-color: #1f7cd6;
-}
-:global([data-theme="dark"]) .btn--primary:disabled {
-  background: #335a8f;
-  border-color: #335a8f;
+:global([data-theme="dark"]) .form {
+  & input,
+  & textarea {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #eee; /* ← これで文字が白っぽくなります */
+  }
+
+  & .btn--primary {
+    background: #3399ff;
+    border-color: #3399ff;
+    color: #fff;
+  }
+  & .btn--primary:hover:not(:disabled) {
+    background: #1f7cd6;
+    border-color: #1f7cd6;
+  }
+  & .btn--primary:disabled {
+    background: #335a8f;
+    border-color: #335a8f;
+  }
 }
 </style>
