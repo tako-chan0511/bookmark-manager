@@ -1,7 +1,5 @@
-<!-- src/views/Dashboard.vue -->
 <template>
   <div class="dashboard">
-
     <!-- 検索セクション -->
     <section class="section section--search">
       <h2 class="section__title">🔍 ブックマークを検索</h2>
@@ -11,8 +9,6 @@
         placeholder="タイトル／説明文を含むキーワードで検索"
         class="search"
       />
-      <!-- 追加: タグ絞り込みラベル -->
-      <p class="chips-label">🏷️ タグで絞り込み</p>
       <div class="chips">
         <span
           v-for="tag in tags"
@@ -50,7 +46,6 @@
         @updated="refresh"
       />
     </section>
-
   </div>
 </template>
 
@@ -71,7 +66,7 @@ function refresh() {
   reloadFlag.value = !reloadFlag.value
 }
 
-// タグのON/OFF
+// タグON/OFF
 function toggleTag(tag: string) {
   const i = selectedTags.value.indexOf(tag)
   if (i === -1) selectedTags.value.push(tag)
@@ -87,9 +82,7 @@ async function loadTags() {
     .from('tags')
     .select('name')
     .order('name', { ascending: true })
-  if (!error && data) {
-    tags.value = data.map(t => t.name)
-  }
+  if (!error && data) tags.value = data.map(t => t.name)
 }
 onMounted(loadTags)
 </script>
@@ -100,15 +93,14 @@ onMounted(loadTags)
   margin: 2rem auto;
   padding: 0 1rem;
 }
-
-/* セクションごとの共通スタイル */
 .section {
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.5rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  color: var(--text-main);
 }
 .section__title {
   position: relative;
@@ -119,49 +111,45 @@ onMounted(loadTags)
   position: absolute;
   left: 0; top: 0.2rem;
   width: 0.25rem; height: 1.2rem;
-  background: var(--accent-color, #007acc);
+  background: var(--accent-color);
   border-radius: 2px;
 }
 
-/* 検索入力 */
+/* 検索 */
 .search {
   width: 100%;
   padding: 0.5rem;
   margin-bottom: 0.75rem;
-  border: 1px solid #ccc;
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
 }
 
 /* チップ */
-.chips-label {
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-}
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
 }
 .chip {
   padding: 0.25rem 0.75rem;
-  background: #f3f3f3;
+  background: var(--tag-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   cursor: pointer;
   user-select: none;
   transition: background 0.2s;
 }
 .chip.active {
-  background: #007acc;
-  color: #fff;
+  background: var(--tag-active-bg);
+  color: var(--tag-active-text);
 }
 .chip--clear {
   background: transparent;
-  color: #007acc;
+  color: var(--accent-color);
   border: none;
-  padding: 0.25rem;
   margin-left: auto;
 }
-
-/* フォーム・一覧部は元のスタイルが反映されます */
 </style>

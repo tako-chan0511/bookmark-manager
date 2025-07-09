@@ -1,10 +1,7 @@
 <!-- src/components/BookmarkList.vue -->
 <template>
   <div class="cards">
-    <!-- 読み込み中表示 -->
     <article v-if="loading" class="card loading">読み込み中…</article>
-
-    <!-- カードレイアウトで表示 -->
     <article
       v-else
       v-for="bm in filteredBookmarks"
@@ -30,12 +27,12 @@
           placeholder="タグ (カンマ区切り)"
         />
         <div class="edit-actions">
-          <button @click="saveEdit(bm.id)">保存</button>
-          <button @click="cancelEdit">キャンセル</button>
+          <button class="btn-accent" @click="saveEdit(bm.id)">保存</button>
+          <button class="btn-accent" @click="cancelEdit">キャンセル</button>
         </div>
       </div>
 
-      <!-- 通常表示モード -->
+      <!-- 表示モード -->
       <div v-else class="card-view">
         <div v-if="bm.image_url" class="card-thumb">
           <img :src="bm.image_url" alt="サムネイル" />
@@ -61,18 +58,18 @@
           </small>
         </div>
         <div class="card-actions">
-          <button @click="startEdit(bm)">編集</button>
-          <button @click="deleteBookmark(bm.id)">削除</button>
+          <button class="btn-accent" @click="startEdit(bm)">編集</button>
+          <button class="btn-accent" @click="deleteBookmark(bm.id)">削除</button>
         </div>
       </div>
     </article>
 
-    <!-- 絞り込み結果0件時 -->
     <p v-if="!loading && filteredBookmarks.length === 0" class="no-data">
       該当するブックマークがありません。
     </p>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
@@ -94,29 +91,35 @@ const editDescription = ref('')
 const editImageUrl    = ref('')
 const editTags        = ref('')
 
+// ゲストモード判定
+const isGuest = localStorage.getItem('app_mode') === 'guest'
+
 // データ取得
 async function load() {
   loading.value = true
-  const { data, error } = await supabase
-    .from('bookmarks')
-    .select(
-      `
-      id,
-      title,
-      url,
-      description,
-      image_url,
-      created_at,
-      tags(name)
-    `
-    )
-    .order('created_at', { ascending: false })
+  if (isGuest) {
+    const stored = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    bookmarks.value = stored
+  } else {
+    const { data, error } = await supabase
+      .from('bookmarks')
+      .select(`
+        id,
+        title,
+        url,
+        description,
+        image_url,
+        created_at,
+        tags(name)
+      `)
+      .order('created_at', { ascending: false })
 
-  if (!error && data) {
-    bookmarks.value = data.map(item => ({
-      ...item,
-      tags: item.tags?.map((t: any) => t.name) || []
-    }))
+    if (!error && data) {
+      bookmarks.value = data.map(item => ({
+        ...item,
+        tags: item.tags?.map((t: any) => t.name) || []
+      }))
+    }
   }
   loading.value = false
 }
@@ -124,18 +127,14 @@ async function load() {
 onMounted(load)
 watch(() => props.reloadFlag, load)
 
-// フィルタリング
 const filteredBookmarks = computed(() =>
   bookmarks.value.filter(bm => {
     const kw = props.filterKeyword.toLowerCase()
-    if (kw) {
-      const hay = (bm.title + ' ' + (bm.description || '')).toLowerCase()
-      if (!hay.includes(kw)) return false
+    if (kw && !(bm.title + ' ' + (bm.description || '')).toLowerCase().includes(kw)) {
+      return false
     }
-    if (props.filterTags.length) {
-      if (!bm.tags.some((t: string) => props.filterTags.includes(t))) {
-        return false
-      }
+    if (props.filterTags.length && !bm.tags.some(t => props.filterTags.includes(t))) {
+      return false
     }
     return true
   })
@@ -158,6 +157,25 @@ async function saveEdit(id: string) {
   if (!editTitle.value || !editUrl.value) return
   const tagsArray = editTags.value.split(',').map(s => s.trim()).filter(s => s)
 
+  if (isGuest) {
+    const store = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    const idx = store.findIndex((b: any) => b.id === id)
+    if (idx !== -1) {
+      store[idx] = {
+        ...store[idx],
+        title: editTitle.value,
+        url: editUrl.value,
+        description: editDescription.value || null,
+        image_url: editImageUrl.value || null,
+        tags: tagsArray,
+      }
+      localStorage.setItem('sandbox_bookmarks', JSON.stringify(store))
+      emits('updated')
+      cancelEdit()
+    }
+    return
+  }
+
   const { error: bookErr } = await supabase
     .from('bookmarks')
     .update({
@@ -177,9 +195,7 @@ async function saveEdit(id: string) {
     await supabase
       .from('tags')
       .upsert(tagsArray.map(name => ({ name })), { onConflict: 'name' })
-      .select('id,name')
   }
-
   await supabase.from('bookmark_tags').delete().eq('bookmark_id', id)
   const { data: tagRows } = await supabase
     .from('tags')
@@ -198,6 +214,15 @@ async function saveEdit(id: string) {
 
 async function deleteBookmark(id: string) {
   if (!confirm('本当に削除しますか？')) return
+
+  if (isGuest) {
+    const store = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    const filtered = store.filter((b: any) => b.id !== id)
+    localStorage.setItem('sandbox_bookmarks', JSON.stringify(filtered))
+    emits('deleted')
+    return
+  }
+
   const { error } = await supabase.from('bookmarks').delete().eq('id', id)
   if (!error) emits('deleted')
 }
@@ -210,11 +235,11 @@ async function deleteBookmark(id: string) {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 .card {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px var(--card-shadow, rgba(0,0,0,0.1));
   overflow: hidden;
-  transition: transform .1s ease;
+  transition: transform .1s ease, background .2s ease;
 }
 .card:hover {
   transform: translateY(-2px);
@@ -223,7 +248,7 @@ async function deleteBookmark(id: string) {
   padding: 2rem;
   text-align: center;
   font-style: italic;
-  color: #666;
+  color: var(--text-muted, #666);
 }
 .card-thumb img {
   width: 100%;
@@ -238,45 +263,59 @@ async function deleteBookmark(id: string) {
   padding: 0.75rem;
   flex: 1;
 }
+/* タイトルリンク */
 .card-title {
   font-size: 1.1rem;
   font-weight: bold;
-  color: #007acc;
+  color: var(--accent-color, #007acc);
   text-decoration: none;
 }
+/* 説明文 */
 .card-desc {
   margin: 0.5rem 0;
-  color: #555;
+  color: var(--text-secondary, #555);
+  font-weight: 600;
 }
+/* タグ */
 .card-tags {
   margin-bottom: 0.5rem;
 }
 .tag-chip {
   display: inline-block;
-  background: #eef;
-  color: #226;
+  background: var(--tag-bg, #eef);
+  color: var(--accent-color, #007acc);
   padding: 0.2rem 0.5rem;
   margin-right: 0.3rem;
   border-radius: 4px;
   font-size: 0.75rem;
+  font-weight: 600;
 }
+/* 日付 */
 .card-date {
   font-size: 0.75rem;
-  color: #999;
+  color: var(--text-muted, #999);
+  font-weight: 600;
+}
+/* ボタン共通 */
+.btn-accent {
+  background: var(--accent-color, #007acc);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.btn-accent:hover {
+  background: darken(var(--accent-color, #007acc), 10%);
+  transform: translateY(-1px);
 }
 .card-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
   padding: 0.5rem;
-}
-.card-actions button {
-  background: #fafafa;
-  border: 1px solid #ddd;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
 }
 .card-edit {
   padding: 0.75rem;
@@ -297,12 +336,26 @@ textarea {
   border-radius: 4px;
   box-sizing: border-box;
 }
-button {
-  cursor: pointer;
-}
 .no-data {
   text-align: center;
-  color: #666;
+  color: var(--text-muted, #666);
   grid-column: 1 / -1;
+}
+
+/* ダークモード用変数 */
+:root {
+  --accent-color: #007acc;
+  --card-bg: #ffffff;
+  --card-shadow: rgba(0,0,0,0.1);
+  --text-secondary: #555;
+  --text-muted: #999;
+  --tag-bg: #eef;
+}
+[data-theme="dark"] {
+  --card-bg: #1f1f1f;
+  --card-shadow: rgba(0,0,0,0.6);
+  --text-secondary: #ccc;
+  --text-muted: #888;
+  --tag-bg: #333;
 }
 </style>
