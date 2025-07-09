@@ -1,4 +1,3 @@
-<!-- src/components/BookmarkList.vue -->
 <template>
   <div class="cards">
     <article v-if="loading" class="card loading">読み込み中…</article>
@@ -8,7 +7,6 @@
       :key="bm.id"
       class="card"
     >
-      <!-- 編集モード -->
       <div v-if="editingId === bm.id" class="card-edit">
         <input v-model="editTitle" placeholder="タイトル" required />
         <input v-model="editUrl" placeholder="URL" required />
@@ -32,7 +30,6 @@
         </div>
       </div>
 
-      <!-- 表示モード -->
       <div v-else class="card-view">
         <div v-if="bm.image_url" class="card-thumb">
           <img :src="bm.image_url" alt="サムネイル" />
@@ -133,7 +130,8 @@ const filteredBookmarks = computed(() =>
     if (kw && !(bm.title + ' ' + (bm.description || '')).toLowerCase().includes(kw)) {
       return false
     }
-    if (props.filterTags.length && !bm.tags.some(t => props.filterTags.includes(t))) {
+    // ★修正: 引数 't' の型を明示的に string に指定★
+    if (props.filterTags.length && !bm.tags.some((t: string) => props.filterTags.includes(t))) {
       return false
     }
     return true
