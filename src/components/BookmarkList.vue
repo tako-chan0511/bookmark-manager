@@ -279,14 +279,14 @@ async function deleteBookmark(id: string) {
   margin-bottom: 0.5rem;
 }
 .tag-chip {
-  display: inline-block;
-  background: var(--tag-bg, #eef);
-  color: var(--accent-color, #007acc);
-  padding: 0.2rem 0.5rem;
-  margin-right: 0.3rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
+padding: 0.25rem 0.75rem;
+  background: var(--tag-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
 }
 /* 日付 */
 .card-date {
