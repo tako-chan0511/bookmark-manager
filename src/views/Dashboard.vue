@@ -1,9 +1,8 @@
-<!-- src/views/Dashboard.vue -->
 <template>
   <div class="dashboard">
     <h1>My Bookmarks</h1>
 
-    <!-- 1. キーワード検索 -->
+    <!-- 1. 検索ボックス -->
     <input
       v-model="keyword"
       type="text"
@@ -11,23 +10,18 @@
       class="search"
     />
 
-    <!-- 2. タグで絞り込み -->
-    <div class="tag-filter">
-      <label for="tag-filter" class="tag-filter-label">タグで絞り込み:</label>
-      <select
-        id="tag-filter"
-        v-model="selectedTags"
-        multiple
-        class="filter-tags"
+    <!-- 2. タグ絞り込み: チップ方式 -->
+    <div class="chips">
+      <span
+        v-for="tag in tags"
+        :key="tag"
+        class="chip"
+        :class="{ active: selectedTags.includes(tag) }"
+        @click="toggleTag(tag)"
       >
-        <option
-          v-for="tag in tags"
-          :key="tag"
-          :value="tag"
-        >{{ tag }}</option>
-      </select>
-      <!-- クリアボタン -->
-      <button type="button" class="clear-btn" @click="clearTags">
+        {{ tag }}
+      </span>
+      <button v-if="selectedTags.length" class="clear" @click="clearTags">
         クリア
       </button>
     </div>
@@ -65,7 +59,17 @@ function refresh() {
   reloadFlag.value = !reloadFlag.value
 }
 
-// 選択タグのクリア
+// チップ選択トグル
+function toggleTag(tag: string) {
+  const i = selectedTags.value.indexOf(tag)
+  if (i === -1) {
+    selectedTags.value.push(tag)
+  } else {
+    selectedTags.value.splice(i, 1)
+  }
+}
+
+// 選択タグをクリア
 function clearTags() {
   selectedTags.value = []
 }
@@ -76,7 +80,6 @@ async function loadTags() {
     .from('tags')
     .select('name')
     .order('name', { ascending: true })
-
   if (!error && data) {
     tags.value = data.map((t: { name: string }) => t.name)
   }
@@ -104,32 +107,40 @@ h1 {
   border-radius: 4px;
 }
 
-/* タグ絞り込み */
+/* タグチップ */
 .tag-filter {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
-.tag-filter-label {
-  margin-right: 0.5rem;
-  font-weight: bold;
+.chip {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  background: #eef;
+  color: #226;
+  border-radius: 16px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
 }
-.filter-tags {
-  flex: 1;
-  height: 4rem;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.chip:hover {
+  background: #dde;
+}
+.chip.active {
+  background: #007acc;
+  color: #fff;
 }
 .clear-btn {
-  margin-left: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #e0e0e0;
+  padding: 0.4rem 0.8rem;
+  background: #f5f5f5;
   border: 1px solid #ccc;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 0.875rem;
 }
 .clear-btn:hover {
-  background: #d0d0d0;
+  background: #e5e5e5;
 }
 </style>
