@@ -4,13 +4,15 @@
 
     <!-- 検索セクション -->
     <section class="section section--search">
-      <h2 class="section__title">🔍 検索</h2>
+      <h2 class="section__title">🔍 ブックマークを検索</h2>
       <input
         v-model="keyword"
         type="text"
         placeholder="タイトル／説明文を含むキーワードで検索"
         class="search"
       />
+      <!-- 追加: タグ絞り込みラベル -->
+      <p class="chips-label">🏷️ タグで絞り込み</p>
       <div class="chips">
         <span
           v-for="tag in tags"
@@ -109,9 +111,16 @@ onMounted(loadTags)
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 .section__title {
-  margin: 0 0 0.75rem;
-  font-size: 1.25rem;
-  color: #333;
+  position: relative;
+  padding-left: 1.5rem;
+}
+.section__title::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0.2rem;
+  width: 0.25rem; height: 1.2rem;
+  background: var(--accent-color, #007acc);
+  border-radius: 2px;
 }
 
 /* 検索入力 */
@@ -124,10 +133,15 @@ onMounted(loadTags)
 }
 
 /* チップ */
+.chips-label {
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 .chip {
   padding: 0.25rem 0.75rem;
