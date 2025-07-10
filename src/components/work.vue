@@ -20,11 +20,7 @@
       placeholder="サムネイルURL (任意)"
       class="image"
     />
-    <button
-      type="submit"
-      :disabled="submitting || !title || !url"
-      class="btn btn--primary submit"
-    >
+    <button type="submit" :disabled="submitting" class="submit">
       {{ submitting ? '追加中…' : '追加' }}
     </button>
 
@@ -55,7 +51,7 @@ const title       = ref('')
 const url         = ref('')
 const image_url   = ref('')
 const description = ref('')
-const tagString   = ref('')
+const tagString   = ref('')   // ← カンマ区切りでタグ文字列を管理
 const submitting  = ref(false)
 
 async function addBookmark() {
@@ -128,7 +124,16 @@ async function addBookmark() {
 .form {
   display: grid;
   grid-template-columns:
-    2fr 2fr 1fr auto;
+    2fr    /* タイトル */
+    2fr    /* URL */
+    1fr    /* サムネイル */
+    auto   /* 追加ボタン */
+  ;
+  grid-template-rows:
+    auto   /* 1行目 */
+    auto   /* 2行目: タグ */
+    auto   /* 3行目: 説明 */
+  ;
   grid-template-areas:
     "title url image submit"
     "tags-input tags-input tags-input tags-input"
@@ -136,69 +141,22 @@ async function addBookmark() {
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
-.title       { grid-area: title; }
-.url         { grid-area: url; }
-.image       { grid-area: image; }
-.submit      { grid-area: submit; }
-.tags-input  { grid-area: tags-input; }
-.description { grid-area: description; }
+.title        { grid-area: title; }
+.url          { grid-area: url; }
+.image        { grid-area: image; }
+.submit       { grid-area: submit; }
+.tags-input   { grid-area: tags-input; }
+.description  { grid-area: description; }
 
-input, textarea {
+input, textarea, button {
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 0.9rem;
-  background: var(--bg-input, white);
-  color: var(--text, #333);
 }
-
-/* 共通ボタンスタイル */
-.btn {
-  border-radius: 4px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.5rem 1rem;
+button.submit {
+  background: #007acc;
+  color: #fff;
+  border: none;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
-}
-
-/* プライマリーボタン (追加など) */
-.btn--primary {
-  background: var(--accent-color, #007acc);
-  color: white;
-  border-color: var(--accent-color, #007acc);
-}
-.btn--primary:hover:not(:disabled) {
-  background: #005fa3;
-  border-color: #005fa3;
-}
-.btn--primary:disabled {
-  background: #8ebfef;
-  border-color: #8ebfef;
-  cursor: not-allowed;
-}
-/* ダークモード調整 */
-:global([data-theme="dark"]) .form {
-  & input,
-  & textarea {
-    background: #2a2a2a;
-    border-color: #444;
-    color: #eee; /* ← これで文字が白っぽくなります */
-  }
-
-  & .btn--primary {
-    background: #3399ff;
-    border-color: #3399ff;
-    color: #fff;
-  }
-  & .btn--primary:hover:not(:disabled) {
-    background: #1f7cd6;
-    border-color: #1f7cd6;
-  }
-  & .btn--primary:disabled {
-    background: #335a8f;
-    border-color: #335a8f;
-  }
 }
 </style>
