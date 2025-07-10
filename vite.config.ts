@@ -19,7 +19,7 @@ export default defineConfig({
         name: 'ブックマーク管理アプリ', // アプリのフルネーム
         short_name: 'Bookmark-manager', // ホーム画面に表示される短い名前
         description: 'ブックマークを管理するアプリです。', // アプリの説明
-        start_url: '/bookmark-manager/', // アプリ起動時のURL  →　★注意★　vercelの場合はここは'.'にする。
+        start_url: '.', // アプリ起動時のURL  →　★注意★　vercelの場合はここは'.'にする。
         display: 'standalone', // アドレスバーなどを表示しないネイティブアプリのような表示
         background_color: '#ffffff', // スプラッシュ画面の背景色
         theme_color: '#007acc',      // ツールバーの色
