@@ -1,18 +1,15 @@
-<!-- src/components/BookmarkList.vue -->
 <template>
-  <ul class="list">
-    <li v-if="loading">読み込み中…</li>
-    <!-- 絞り込み後のリストをループ -->
-    <li
+  <div class="cards">
+    <article v-if="loading" class="card loading">読み込み中…</article>
+    <article
       v-else
       v-for="bm in filteredBookmarks"
       :key="bm.id"
-      class="item"
+      class="card"
     >
-      <!-- 編集モード -->
-      <template v-if="editingId === bm.id">
+      <div v-if="editingId === bm.id" class="card-edit">
         <input v-model="editTitle" placeholder="タイトル" required />
-        <input v-model="editUrl"   placeholder="URL"    required />
+        <input v-model="editUrl" placeholder="URL" required />
         <textarea
           v-model="editDescription"
           placeholder="説明（任意）"
@@ -23,83 +20,103 @@
           type="url"
           placeholder="サムネイルURL（任意）"
         />
-        <!-- タグ編集用フィールド -->
         <input
           v-model="editTags"
           placeholder="タグ (カンマ区切り)"
         />
-        <button @click="saveEdit(bm.id)">保存</button>
-        <button @click="cancelEdit">キャンセル</button>
-      </template>
+        <div class="edit-actions">
+          <button class="btn-accent" @click="saveEdit(bm.id)">保存</button>
+          <button class="btn-accent" @click="cancelEdit">キャンセル</button>
+        </div>
+      </div>
 
-      <!-- 通常表示モード -->
-      <template v-else>
-        <div v-if="bm.image_url" class="thumb-wrapper">
-          <img :src="bm.image_url" class="thumb" alt="サムネイル" />
+      <div v-else class="card-view">
+        <div v-if="bm.image_url" class="card-thumb">
+          <img :src="bm.image_url" alt="サムネイル" />
         </div>
-        <div class="info">
-          <a :href="bm.url" target="_blank">{{ bm.title }}</a>
-          <div v-if="bm.tags?.length" class="tags">
-            <span v-for="tag in bm.tags" :key="tag" class="tag">{{ tag }}</span>
+        <div class="card-body">
+          <a :href="bm.url" target="_blank" class="card-title">
+            {{ bm.title }}
+          </a>
+          <p v-if="bm.description" class="card-desc">
+            {{ bm.description }}
+          </p>
+          <div v-if="bm.tags?.length" class="card-tags">
+            <span
+              v-for="tag in bm.tags"
+              :key="tag"
+              class="tag-chip"
+            >
+              {{ tag }}
+            </span>
           </div>
-          <p v-if="bm.description" class="desc">{{ bm.description }}</p>
-          <small>（{{ new Date(bm.created_at).toLocaleString() }}）</small>
+          <small class="card-date">
+            （{{ new Date(bm.created_at).toLocaleString() }}）
+          </small>
         </div>
-        <div class="actions">
-          <button @click="startEdit(bm)">編集</button>
-          <button @click="deleteBookmark(bm.id)">削除</button>
+        <div class="card-actions">
+          <button class="btn-accent" @click="startEdit(bm)">編集</button>
+          <button class="btn-accent" @click="deleteBookmark(bm.id)">削除</button>
         </div>
-      </template>
-    </li>
-  </ul>
+      </div>
+    </article>
+
+    <p v-if="!loading && filteredBookmarks.length === 0" class="no-data">
+      該当するブックマークがありません。
+    </p>
+  </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '@/supabase/supabase'
 
-// ① プロップスに検索キーワード & タグ絞り込みを受け取る
 const props = defineProps<{
   reloadFlag:    boolean
   filterKeyword: string
   filterTags:    string[]
 }>()
-
 const emits = defineEmits(['deleted', 'updated'] as const)
 
 const bookmarks       = ref<any[]>([])
 const loading         = ref(false)
-
-// 編集モード用ステート
 const editingId       = ref<string | null>(null)
 const editTitle       = ref('')
 const editUrl         = ref('')
 const editDescription = ref('')
 const editImageUrl    = ref('')
-// ② タグ編集用文字列フィールド
 const editTags        = ref('')
 
-// ③ データ取得 (tagsリレーション込み)
+// ゲストモード判定
+const isGuest = localStorage.getItem('app_mode') === 'guest'
+
+// データ取得
 async function load() {
   loading.value = true
-  const { data, error } = await supabase
-    .from('bookmarks')
-    .select(`
-      id,
-      title,
-      url,
-      description,
-      image_url,
-      created_at,
-      tags(name)
-    `)
-    .order('created_at', { ascending: false })
+  if (isGuest) {
+    const stored = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    bookmarks.value = stored
+  } else {
+    const { data, error } = await supabase
+      .from('bookmarks')
+      .select(`
+        id,
+        title,
+        url,
+        description,
+        image_url,
+        created_at,
+        tags(name)
+      `)
+      .order('created_at', { ascending: false })
 
-  if (!error && data) {
-    bookmarks.value = data.map(item => ({
-      ...item,
-      tags: item.tags?.map((t: any) => t.name) || []
-    }))
+    if (!error && data) {
+      bookmarks.value = data.map(item => ({
+        ...item,
+        tags: item.tags?.map((t: any) => t.name) || []
+      }))
+    }
   }
   loading.value = false
 }
@@ -107,26 +124,20 @@ async function load() {
 onMounted(load)
 watch(() => props.reloadFlag, load)
 
-// ④ 絞り込み用 computed
-const filteredBookmarks = computed(() => {
-  return bookmarks.value.filter(bm => {
-    // キーワード検索 (タイトル or 説明)
+const filteredBookmarks = computed(() =>
+  bookmarks.value.filter(bm => {
     const kw = props.filterKeyword.toLowerCase()
-    if (kw) {
-      const hay = (bm.title + ' ' + (bm.description || '')).toLowerCase()
-      if (!hay.includes(kw)) return false
+    if (kw && !(bm.title + ' ' + (bm.description || '')).toLowerCase().includes(kw)) {
+      return false
     }
-    // タグ絞り込み (いずれか一つ以上含む)
-    if (props.filterTags.length) {
-      if (!bm.tags.some((t: string) => props.filterTags.includes(t))) {
-        return false
-      }
+    // ★修正: 引数 't' の型を明示的に string に指定★
+    if (props.filterTags.length && !bm.tags.some((t: string) => props.filterTags.includes(t))) {
+      return false
     }
     return true
   })
-})
+)
 
-// 編集開始
 function startEdit(bm: any) {
   editingId.value       = bm.id
   editTitle.value       = bm.title
@@ -136,22 +147,33 @@ function startEdit(bm: any) {
   editTags.value        = bm.tags.join(', ')
 }
 
-// 編集キャンセル
 function cancelEdit() {
   editingId.value = null
 }
 
-// 編集保存
 async function saveEdit(id: string) {
   if (!editTitle.value || !editUrl.value) return
+  const tagsArray = editTags.value.split(',').map(s => s.trim()).filter(s => s)
 
-  // ⑤ タグ文字列 → 配列に分解
-  const tagsArray = editTags.value
-    .split(',')
-    .map(s => s.trim())
-    .filter(s => s)
+  if (isGuest) {
+    const store = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    const idx = store.findIndex((b: any) => b.id === id)
+    if (idx !== -1) {
+      store[idx] = {
+        ...store[idx],
+        title: editTitle.value,
+        url: editUrl.value,
+        description: editDescription.value || null,
+        image_url: editImageUrl.value || null,
+        tags: tagsArray,
+      }
+      localStorage.setItem('sandbox_bookmarks', JSON.stringify(store))
+      emits('updated')
+      cancelEdit()
+    }
+    return
+  }
 
-  // 1) ブックマーク本体を更新
   const { error: bookErr } = await supabase
     .from('bookmarks')
     .update({
@@ -167,119 +189,171 @@ async function saveEdit(id: string) {
     return
   }
 
-  // ★ 2) タグテーブルへ存在しないタグを upsert（自動作成）
   if (tagsArray.length) {
     await supabase
       .from('tags')
       .upsert(tagsArray.map(name => ({ name })), { onConflict: 'name' })
   }
-
-  // 3) 既存タグのクリア
-  await supabase
-    .from('bookmark_tags')
-    .delete()
-    .eq('bookmark_id', id)
-
-  // 4) tagsテーブルから該当タグを取得
+  await supabase.from('bookmark_tags').delete().eq('bookmark_id', id)
   const { data: tagRows } = await supabase
     .from('tags')
-    .select('id, name')
+    .select('id,name')
     .in('name', tagsArray)
 
-  // 5) pivotテーブルに再挿入
   if (tagRows) {
     await supabase
       .from('bookmark_tags')
-      .insert(
-        tagRows.map((t: any) => ({
-          bookmark_id: id,
-          tag_id:      t.id
-        }))
-      )
+      .insert(tagRows.map((t: any) => ({ bookmark_id: id, tag_id: t.id })))
   }
 
   editingId.value = null
   emits('updated')
 }
 
-// 削除
 async function deleteBookmark(id: string) {
   if (!confirm('本当に削除しますか？')) return
-  const { error } = await supabase
-    .from('bookmarks')
-    .delete()
-    .eq('id', id)
 
+  if (isGuest) {
+    const store = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    const filtered = store.filter((b: any) => b.id !== id)
+    localStorage.setItem('sandbox_bookmarks', JSON.stringify(filtered))
+    emits('deleted')
+    return
+  }
+
+  const { error } = await supabase.from('bookmarks').delete().eq('id', id)
   if (!error) emits('deleted')
 }
 </script>
 
 <style scoped>
-.list {
-  list-style: none;
-  padding: 0;
-}
-.item {
-  display: flex;
-  align-items: flex-start;
+.cards {
+  display: grid;
   gap: 1rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #eee;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
-
-/* サムネイル */
-.thumb-wrapper {
-  flex-shrink: 0;
+.card {
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px var(--card-shadow, rgba(0,0,0,0.1));
+  overflow: hidden;
+  transition: transform .1s ease, background .2s ease;
 }
-.thumb {
-  width: 80px;
-  height: 80px;
+.card:hover {
+  transform: translateY(-2px);
+}
+.loading {
+  padding: 2rem;
+  text-align: center;
+  font-style: italic;
+  color: var(--text-muted, #666);
+}
+.card-thumb img {
+  width: 100%;
+  height: 120px;
   object-fit: cover;
-  border-radius: 4px;
 }
-
-/* 情報 */
-.info {
-  flex: 1;
-}
-.desc {
-  margin: 0.25rem 0;
-  color: #555;
-}
-
-/* タグ */
-.tags {
-  margin: 0.25rem 0;
-}
-.tag {
-  display: inline-block;
-  background: #f0f0f0;
-  color: #333;
-  padding: 0.125rem 0.5rem;
-  margin-right: 0.25rem;
-  border-radius: 2px;
-  font-size: 0.875rem;
-}
-
-/* 編集・削除ボタン */
-.actions {
+.card-view {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
 }
-
-/* フォーム要素 */
+.card-body {
+  padding: 0.75rem;
+  flex: 1;
+}
+/* タイトルリンク */
+.card-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--accent-color, #007acc);
+  text-decoration: none;
+}
+/* 説明文 */
+.card-desc {
+  margin: 0.5rem 0;
+  color: var(--text-secondary, #555);
+  font-weight: 600;
+}
+/* タグ */
+.card-tags {
+  margin-bottom: 0.5rem;
+}
+.tag-chip {
+padding: 0.25rem 0.75rem;
+  background: var(--tag-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+/* 日付 */
+.card-date {
+  font-size: 0.75rem;
+  color: var(--text-muted, #999);
+  font-weight: 600;
+}
+/* ボタン共通 */
+.btn-accent {
+  background: var(--accent-color, #007acc);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.btn-accent:hover {
+  background: darken(var(--accent-color, #007acc), 10%);
+  transform: translateY(-1px);
+}
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+.card-edit {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
 input,
 textarea {
-  padding: 0.25rem;
+  width: 100%;
+  padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
+  box-sizing: border-box;
 }
-textarea {
-  resize: vertical;
+.no-data {
+  text-align: center;
+  color: var(--text-muted, #666);
+  grid-column: 1 / -1;
 }
-button {
-  padding: 0.25rem 0.5rem;
-  cursor: pointer;
+
+/* ダークモード用変数 */
+:root {
+  --accent-color: #007acc;
+  --card-bg: #ffffff;
+  --card-shadow: rgba(0,0,0,0.1);
+  --text-secondary: #555;
+  --text-muted: #999;
+  --tag-bg: #eef;
+}
+[data-theme="dark"] {
+  --card-bg: #1f1f1f;
+  --card-shadow: rgba(0,0,0,0.6);
+  --text-secondary: #ccc;
+  --text-muted: #888;
+  --tag-bg: #333;
 }
 </style>

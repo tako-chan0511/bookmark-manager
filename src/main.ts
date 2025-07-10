@@ -1,15 +1,12 @@
-// src/main.ts
 import { createApp } from 'vue'
 import App from './App.vue'
-import router from './router'        // ← この行を追加
-import { supabase } from '@/supabase/supabase'
-// アプリ起動前にセッション情報を消す
-supabase.auth.signOut().catch(() => {
-  /* ログアウト済みなら無視 */
-})
+import router from './router'
+import '@/assets/theme.css'    // テーマ変数をグローバル読み込み
 
-// import './assets/main.css'           // 必要に応じてグローバルCSS
+// 起動時に保存テーマを反映
+const saved = localStorage.getItem('theme') || 'light'
+document.documentElement.setAttribute('data-theme', saved)
 
-const app = createApp(App)
-app.use(router)                      // ← ルーターを登録
-app.mount('#app')
+createApp(App)
+  .use(router)
+  .mount('#app')
