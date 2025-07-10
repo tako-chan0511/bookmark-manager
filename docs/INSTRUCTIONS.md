@@ -106,3 +106,8 @@
 不明点や改善案があればお気軽にお知らせください。
 
 ---
+
+# 追記
+PWA化でvercelの場合に以下の点に注意する
+vite.config.ts
+   start_url: '.'    ここはgithub-pagesの場合は/プロジェクト名/
