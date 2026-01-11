@@ -12,7 +12,7 @@
       <p v-if="error" class="error">{{ error }}</p>
 
       <!-- サンドボックスモード試用ボタン -->
-      <p class="sandbox-note">ログインせずに気軽に試すには：</p>
+      <p class="sandbox-note">ログインせずに気軽に試すには以下を押下：</p>
       <button class="sandbox-btn" @click="onSandbox">
         サンドボックスモードでダッシュボードへ ▶
       </button>
