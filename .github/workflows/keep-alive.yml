@@ -1,0 +1,17 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    # 毎日 日本時間 朝9時（UTC 0:00）に実行
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 手動実行用ボタンも有効にする
+
+jobs:
+  ping_supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Tags Table
+        run: |
+          curl -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/tags?select=id&limit=1" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
