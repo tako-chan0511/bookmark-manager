@@ -5,7 +5,7 @@
         <router-link to="/">Home</router-link>
         <router-link v-if="!user" to="/login">Login</router-link>
         <span v-else class="user-info">
-          <template v-if="isSandbox">🧪 サンドボックスモード</template>
+          <template v-if="isSandbox">🧪 サンドボックスモード2</template>
           <template v-else>ようこそ、{{ user.email }} さん</template>
           <button @click="signOut">ログアウト</button>
         </span>
@@ -26,7 +26,7 @@ import { ref, computed, watch } from 'vue'
 import { useAuth } from '@/supabase/useAuth'
 
 const { user, signOut } = useAuth()
-// サンドボックス用ダミーアカウント
+// サンドボックス用ダミーアカウント２
 const sandboxEmail = 'hara.keisuke2@i.softbank.jp'
 const isSandbox = computed(() => user.value?.email === sandboxEmail)
 
