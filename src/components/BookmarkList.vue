@@ -71,6 +71,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '@/supabase/supabase'
+import { useAuth } from '@/supabase/useAuth'
 import { useAppMode } from '@/session/appMode'
 
 const props = defineProps<{
@@ -90,34 +91,32 @@ const editImageUrl    = ref('')
 const editTags        = ref('')
 
 // ゲストモード判定
+const { user } = useAuth()
 const { isGuest } = useAppMode()
 // データ取得
 async function load() {
   loading.value = true
-  if (isGuest) {
-    const stored = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
-    bookmarks.value = stored
-  } else {
+
+  if (user.value) {
+    // ← ログイン中は必ず Supabase
     const { data, error } = await supabase
       .from('bookmarks')
-      .select(`
-        id,
-        title,
-        url,
-        description,
-        image_url,
-        created_at,
-        tags(name)
-      `)
+      .select(`id,title,url,description,image_url,created_at, tags:bookmark_tags(tag_id, tags(name))`)
       .order('created_at', { ascending: false })
 
     if (!error && data) {
-      bookmarks.value = data.map(item => ({
+      bookmarks.value = data.map((item: any) => ({
         ...item,
-        tags: item.tags?.map((t: any) => t.name) || []
+        tags: item.tags?.map((t: any) => t.tags?.name).filter(Boolean) ?? [],
       }))
     }
+  } else if (isGuest.value) {
+    // ← guest のときだけ local
+    bookmarks.value = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+  } else {
+    bookmarks.value = []
   }
+
   loading.value = false
 }
 
