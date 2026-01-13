@@ -26,9 +26,8 @@ import { ref, computed, watch } from 'vue'
 import { useAuth } from '@/supabase/useAuth'
 
 const { user, signOut } = useAuth()
-// サンドボックス用ダミーアカウント
-const sandboxEmail = 'hara.keisuke2@i.softbank.jp'
-const isSandbox = computed(() => user.value?.email === sandboxEmail)
+// サンドボックスモード：ローカルストレージベースで判定
+const isSandbox = computed(() => localStorage.getItem('sandbox_mode') === 'true')
 
 // テーマ管理
 const theme = ref(localStorage.getItem('theme') || 'light')

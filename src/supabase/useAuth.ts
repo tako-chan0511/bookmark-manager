@@ -20,8 +20,16 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
 export function useAuth() {
   // メール／パスワード認証
-  const signIn = (email: string, password: string) =>
-    supabase.auth.signInWithPassword({ email, password })
+  const signIn = (email: string, password: string) => {
+    // サンドボックスモードチェック
+    if (localStorage.getItem('sandbox_mode') === 'true') {
+      return Promise.resolve({
+        data: { session: { user: { email } } },
+        error: null
+      } as any)
+    }
+    return supabase.auth.signInWithPassword({ email, password })
+  }
 
   // メールリンク認証などなら signInWithOtp などに置き換え
   const signUp = (email: string, password: string) =>
@@ -32,8 +40,8 @@ export function useAuth() {
     // 1) Supabase 側セッションを切断
     await supabase.auth.signOut()
 
-    // 2) ローカルの sandbox フラグをクリア
-    localStorage.removeItem('sandbox')
+    // 2) ローカルの sandbox_mode フラグをクリア
+    localStorage.removeItem('sandbox_mode')
 
     // 3) ユーザー情報もリセット
     user.value = null
