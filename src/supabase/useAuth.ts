@@ -8,20 +8,46 @@ const user = ref<User | null>(null)
 
 // 初回セッションを安全に取得
 supabase.auth.getSession().then((res) => {
+  // サンドボックスモード中は Supabase の認証状態を無視
+  if (localStorage.getItem('sandbox_mode') === 'true') {
+    user.value = {
+      id: 'sandbox-user-' + Date.now(),
+      email: '🧪 Sandbox Mode',
+      user_metadata: {}
+    } as any
+    return
+  }
   const session: Session | null = res.data?.session ?? null
   user.value = session?.user ?? null
 })
 
 // 認証状態の変化を監視
 supabase.auth.onAuthStateChange((_event, session) => {
+  // サンドボックスモード中は無視
+  if (localStorage.getItem('sandbox_mode') === 'true') {
+    return
+  }
   const s: Session | null = session ?? null
   user.value = s?.user ?? null
 })
 
 export function useAuth() {
   // メール／パスワード認証
-  const signIn = (email: string, password: string) =>
-    supabase.auth.signInWithPassword({ email, password })
+  const signIn = (email: string, password: string) => {
+    // サンドボックスモードチェック
+    if (localStorage.getItem('sandbox_mode') === 'true') {
+      user.value = {
+        id: 'sandbox-user-' + Date.now(),
+        email: '🧪 Sandbox Mode',
+        user_metadata: {}
+      } as any
+      return Promise.resolve({
+        data: { session: { user: user.value } },
+        error: null
+      } as any)
+    }
+    return supabase.auth.signInWithPassword({ email, password })
+  }
 
   // メールリンク認証などなら signInWithOtp などに置き換え
   const signUp = (email: string, password: string) =>
@@ -32,8 +58,8 @@ export function useAuth() {
     // 1) Supabase 側セッションを切断
     await supabase.auth.signOut()
 
-    // 2) ローカルの sandbox フラグをクリア
-    localStorage.removeItem('sandbox')
+    // 2) ローカルの sandbox_mode フラグをクリア
+    localStorage.removeItem('sandbox_mode')
 
     // 3) ユーザー情報もリセット
     user.value = null

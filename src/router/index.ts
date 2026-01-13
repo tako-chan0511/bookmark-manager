@@ -23,13 +23,19 @@ const router = createRouter({
 
 // グローバルガード
 router.beforeEach(async (to, from, next) => {
+  // サンドボックスモード判定
+  const isSandbox = localStorage.getItem('sandbox_mode') === 'true'
+  
   const { data: { session } } = await supabase.auth.getSession()
 
-  if (to.meta.requiresAuth && !session) {
-    // 未ログインならログイン画面へ
+  if (to.meta.requiresAuth && !session && !isSandbox) {
+    // 未ログイン＆サンドボックスでなければログイン画面へ
     next({ name: 'Login' })
-  } else if ((to.name === 'Login' || to.name === 'Home') && session) {
-    // ログイン済み／セッションありならダッシュボードへ
+  } else if ((to.name === 'Login' || to.name === 'Home') && session && !isSandbox) {
+    // ログイン済み（サンドボックスではない）ならダッシュボードへ
+    next({ name: 'Dashboard' })
+  } else if ((to.name === 'Login' || to.name === 'Home') && isSandbox) {
+    // サンドボックスモード中はダッシュボードへ
     next({ name: 'Dashboard' })
   } else {
     next()

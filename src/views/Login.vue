@@ -54,17 +54,13 @@ const onSignUp = async () => {
   }
 }
 
-// サンドボックスモード：事前に supabase に登録済みのダミーアカウントで強制ログイン
+// サンドボックスモード：認証なしでローカルストレージベースで動作
 const onSandbox = async () => {
   error.value = null
-  const dummyEmail = 'hara.keisuke2@i.softbank.jp'
-  const dummyPwd   = 'tako1234'
-  const { data: { session }, error: e } = await signIn(dummyEmail, dummyPwd)
-  if (e) {
-    error.value = 'サンドボックスログインエラー: ' + e.message
-  } else if (session) {
-    router.push({ name: 'Home' })
-  }
+  // サンドボックス専用フラグをセット
+  localStorage.setItem('sandbox_mode', 'true')
+  // ダッシュボードへ移動（useAuthで処理される）
+  router.push({ name: 'Dashboard' })
 }
 </script>
 

@@ -58,8 +58,43 @@ const description = ref('')
 const tagString   = ref('')
 const submitting  = ref(false)
 
+// サンドボックスモード判定
+const isSandbox = localStorage.getItem('sandbox_mode') === 'true'
+
 async function addBookmark() {
   submitting.value = true
+
+  if (isSandbox) {
+    // サンドボックス：ローカルストレージに保存
+    const names = tagString.value
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+
+    const newBookmark = {
+      id: 'sandbox-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+      title: title.value,
+      url: url.value,
+      image_url: image_url.value || null,
+      description: description.value || null,
+      tags: names,
+      created_at: new Date().toISOString(),
+    }
+
+    const store = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    store.push(newBookmark)
+    localStorage.setItem('sandbox_bookmarks', JSON.stringify(store))
+
+    // フォームクリア
+    title.value       = ''
+    url.value         = ''
+    image_url.value   = ''
+    description.value = ''
+    tagString.value   = ''
+    emits('added')
+    submitting.value = false
+    return
+  }
 
 // 1) ブックマーク登録＆ID取得
   const insertRes = await supabase
