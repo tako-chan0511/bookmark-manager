@@ -8,12 +8,25 @@ const user = ref<User | null>(null)
 
 // 初回セッションを安全に取得
 supabase.auth.getSession().then((res) => {
+  // サンドボックスモード中は Supabase の認証状態を無視
+  if (localStorage.getItem('sandbox_mode') === 'true') {
+    user.value = {
+      id: 'sandbox-user-' + Date.now(),
+      email: '🧪 Sandbox Mode',
+      user_metadata: {}
+    } as any
+    return
+  }
   const session: Session | null = res.data?.session ?? null
   user.value = session?.user ?? null
 })
 
 // 認証状態の変化を監視
 supabase.auth.onAuthStateChange((_event, session) => {
+  // サンドボックスモード中は無視
+  if (localStorage.getItem('sandbox_mode') === 'true') {
+    return
+  }
   const s: Session | null = session ?? null
   user.value = s?.user ?? null
 })

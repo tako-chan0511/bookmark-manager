@@ -89,12 +89,12 @@ const editImageUrl    = ref('')
 const editTags        = ref('')
 
 // ゲストモード判定
-const isGuest = localStorage.getItem('app_mode') === 'guest'
+const isSandbox = localStorage.getItem('sandbox_mode') === 'true'
 
 // データ取得
 async function load() {
   loading.value = true
-  if (isGuest) {
+  if (isSandbox) {
     const stored = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
     bookmarks.value = stored
   } else {
@@ -155,7 +155,7 @@ async function saveEdit(id: string) {
   if (!editTitle.value || !editUrl.value) return
   const tagsArray = editTags.value.split(',').map(s => s.trim()).filter(s => s)
 
-  if (isGuest) {
+  if (isSandbox) {
     const store = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
     const idx = store.findIndex((b: any) => b.id === id)
     if (idx !== -1) {
@@ -213,7 +213,7 @@ async function saveEdit(id: string) {
 async function deleteBookmark(id: string) {
   if (!confirm('本当に削除しますか？')) return
 
-  if (isGuest) {
+  if (isSandbox) {
     const store = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
     const filtered = store.filter((b: any) => b.id !== id)
     localStorage.setItem('sandbox_bookmarks', JSON.stringify(filtered))
