@@ -71,6 +71,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '@/supabase/supabase'
+import { useAppMode } from '@/session/appMode'
 
 const props = defineProps<{
   reloadFlag:    boolean
@@ -89,8 +90,7 @@ const editImageUrl    = ref('')
 const editTags        = ref('')
 
 // ゲストモード判定
-const isGuest = localStorage.getItem('app_mode') === 'guest'
-
+const { isGuest } = useAppMode()
 // データ取得
 async function load() {
   loading.value = true

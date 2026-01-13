@@ -24,6 +24,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/supabase/useAuth'
+import { enterGuest, exitGuest } from '@/session/appMode'
 
 const router = useRouter()
 const { signIn, signUp } = useAuth()
@@ -32,41 +33,34 @@ const email = ref('')
 const password = ref('')
 const error = ref<string | null>(null)
 
-// 通常ログイン
 const onSignIn = async () => {
   error.value = null
   const { data: { session }, error: e } = await signIn(email.value, password.value)
-  if (e) {
-    error.value = 'ログインエラー: ' + e.message
-  } else if (session) {
-    router.push({ name: 'Home' })
+  if (e) return (error.value = 'ログインエラー: ' + e.message)
+  if (session) {
+    exitGuest()
+    router.push({ name: 'Dashboard' })
   }
 }
 
-// 新規登録
 const onSignUp = async () => {
   error.value = null
-  const { error: e } = await signUp(email.value, password.value)
-  if (e) {
-    error.value = '登録エラー: ' + e.message
-  } else {
-    alert('登録OK！ メールを確認してください')
+  const { data: { session }, error: e } = await signUp(email.value, password.value)
+  if (e) return (error.value = '登録エラー: ' + e.message)
+  if (session) {
+    exitGuest()
+    router.push({ name: 'Dashboard' })
   }
 }
 
-// サンドボックスモード：事前に supabase に登録済みのダミーアカウントで強制ログイン
-const onSandbox = async () => {
+// ★ここが重要：認証しないサンドボックス
+const onSandbox = () => {
   error.value = null
-  const dummyEmail = 'hara.keisuke2@i.softbank.jp'
-  const dummyPwd   = 'tako1234'
-  const { data: { session }, error: e } = await signIn(dummyEmail, dummyPwd)
-  if (e) {
-    error.value = 'サンドボックスログインエラー: ' + e.message
-  } else if (session) {
-    router.push({ name: 'Home' })
-  }
+  enterGuest()
+  router.push({ name: 'Dashboard' })
 }
 </script>
+
 
 <style scoped>
 .login-container {

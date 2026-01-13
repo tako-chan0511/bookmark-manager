@@ -48,8 +48,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { supabase } from '@/supabase/supabase'
+import { useAppMode } from '@/session/appMode'
 
 const emits = defineEmits(['added'] as const)
+
+const { isGuest } = useAppMode()
 
 const title       = ref('')
 const url         = ref('')
@@ -58,135 +61,163 @@ const description = ref('')
 const tagString   = ref('')
 const submitting  = ref(false)
 
-async function addBookmark() {
-  submitting.value = true
+const SANDBOX_STORE_KEY = 'sandbox_bookmarks'
 
-// 1) ブックマーク登録＆ID取得
-  const insertRes = await supabase
-    .from("bookmarks")
-    .insert({
-      title:       title.value,
-      url:         url.value,
-      image_url:   image_url.value || null,
-      description: description.value || null,
-    })
-    .select("id");
-  const err1 = insertRes.error;
-  const bm = insertRes.data?.[0];
-  if (err1 || !bm) {
-    console.error("追加エラー:", err1);
-    submitting.value = false;
-    return;
-  }
-  // 2) カンマ区切り文字列 → string[] に変換
-  const names = tagString.value
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean)
-
-  if (names.length) {
-    // 3) tagsテーブルに upsert → まだないタグは作成
-    const { error: err2 } = await supabase
-      .from('tags')
-      .upsert(names.map(name => ({ name })), { onConflict: 'name' })
-    if (err2) {
-      console.error('タグ upsert エラー', err2)
-    } else {
-      // 4) upsert済みタグのIDを取得
-      const { data: tagRows, error: err3 } = await supabase
-        .from('tags')
-        .select('id,name')
-        .in('name', names)
-      if (err3 || !tagRows) {
-        console.error('タグ取得エラー', err3)
-      } else {
-        // 5) bookmark_tags ピボットにリンクを挿入
-        const links = tagRows.map(t => ({
-          bookmark_id: bm.id,
-          tag_id:      t.id,
-        }))
-        const { error: err4 } = await supabase
-          .from('bookmark_tags')
-          .insert(links)
-        if (err4) console.error('リンク登録エラー', err4)
-      }
+function parseTags(s: string): string[] {
+  // 重複除去しつつ順序維持
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const t of s.split(',').map(x => x.trim()).filter(Boolean)) {
+    if (!seen.has(t)) {
+      seen.add(t)
+      out.push(t)
     }
   }
+  return out
+}
 
-  // フォームクリア＆親コンポーネントへ通知
+function newId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function clearForm() {
   title.value       = ''
   url.value         = ''
   image_url.value   = ''
   description.value = ''
   tagString.value   = ''
-  emits('added')
-  submitting.value = false
+}
+
+async function addBookmark() {
+  if (submitting.value) return
+  submitting.value = true
+
+  try {
+    const tags = parseTags(tagString.value)
+
+    // ------------------------
+    // Guest(サンドボックス) → localStorage に保存
+    // ------------------------
+    if (isGuest.value) {
+      const store = JSON.parse(localStorage.getItem(SANDBOX_STORE_KEY) || '[]')
+      store.unshift({
+        id: newId(),
+        title: title.value,
+        url: url.value,
+        image_url: image_url.value || null,
+        description: description.value || null,
+        tags,
+        created_at: new Date().toISOString(),
+      })
+      localStorage.setItem(SANDBOX_STORE_KEY, JSON.stringify(store))
+
+      clearForm()
+      emits('added')
+      return
+    }
+
+    // ------------------------
+    // Auth(通常) → Supabase に保存
+    // ------------------------
+    // 1) bookmarks 登録＆ID取得
+    const { data: bookmarkRow, error: err1 } = await supabase
+      .from('bookmarks')
+      .insert({
+        title: title.value,
+        url: url.value,
+        image_url: image_url.value || null,
+        description: description.value || null,
+      })
+      .select('id')
+      .single()
+
+    if (err1 || !bookmarkRow) {
+      console.error('追加エラー(bookmarks):', err1)
+      return
+    }
+
+    // 2) tags / bookmark_tags 登録（任意）
+    if (tags.length) {
+      // tags テーブルに upsert（name が unique 前提）
+      const { error: err2 } = await supabase
+        .from('tags')
+        .upsert(tags.map(name => ({ name })), { onConflict: 'name' })
+
+      if (err2) {
+        console.error('追加エラー(tags upsert):', err2)
+      } else {
+        // upsert した tags の id を取得して pivot を作る
+        const { data: tagRows, error: err3 } = await supabase
+          .from('tags')
+          .select('id,name')
+          .in('name', tags)
+
+        if (err3 || !tagRows) {
+          console.error('追加エラー(tags select):', err3)
+        } else if (tagRows.length) {
+          const links = tagRows.map(t => ({
+            bookmark_id: bookmarkRow.id,
+            tag_id: t.id,
+          }))
+          const { error: err4 } = await supabase
+            .from('bookmark_tags')
+            .insert(links)
+
+          if (err4) console.error('追加エラー(bookmark_tags insert):', err4)
+        }
+      }
+    }
+
+    clearForm()
+    emits('added')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .form {
   display: grid;
   grid-template-columns:
-    2fr 2fr 1fr auto;
+    2fr 2fr 2fr auto;
+  grid-template-rows:
+    auto auto auto;
   grid-template-areas:
     "title url image submit"
-    "tags-input tags-input tags-input tags-input"
-    "description description description description";
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-.title       { grid-area: title; }
-.url         { grid-area: url; }
-.image       { grid-area: image; }
-.submit      { grid-area: submit; }
-.tags-input  { grid-area: tags-input; }
-.description { grid-area: description; }
+    "tags  tags tags  tags"
+    "desc  desc desc  desc";
+  gap: 0.75rem;
 
-input, textarea {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  background: var(--bg-input, white);
-  color: var(--text, #333);
-}
+  & .title       { grid-area: title; }
+  & .url         { grid-area: url; }
+  & .image       { grid-area: image; }
+  & .submit      { grid-area: submit; }
+  & .tags-input  { grid-area: tags; }
+  & .description { grid-area: desc; }
 
-/* 共通ボタンスタイル */
-.btn {
-  border-radius: 4px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
-}
-
-/* プライマリーボタン (追加など) */
-.btn--primary {
-  background: var(--accent-color, #007acc);
-  color: white;
-  border-color: var(--accent-color, #007acc);
-}
-.btn--primary:hover:not(:disabled) {
-  background: #005fa3;
-  border-color: #005fa3;
-}
-.btn--primary:disabled {
-  background: #8ebfef;
-  border-color: #8ebfef;
-  cursor: not-allowed;
-}
-/* ダークモード調整 */
-:global([data-theme="dark"]) .form {
-  & input,
-  & textarea {
-    background: #2a2a2a;
-    border-color: #444;
-    color: #eee; /* ← これで文字が白っぽくなります */
+  input, textarea {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
   }
 
+  textarea {
+    resize: vertical;
+  }
+
+  .btn {
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+  }
   & .btn--primary {
     background: #3399ff;
     border-color: #3399ff;
@@ -199,6 +230,7 @@ input, textarea {
   & .btn--primary:disabled {
     background: #335a8f;
     border-color: #335a8f;
+    cursor: not-allowed;
   }
 }
 </style>

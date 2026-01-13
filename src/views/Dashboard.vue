@@ -10,6 +10,7 @@
         class="search"
       />
       <h3 class="section__title">タグを選択してください</h3>
+
       <div class="chips">
         <span
           v-for="tag in tags"
@@ -20,6 +21,7 @@
         >
           {{ tag }}
         </span>
+
         <button
           v-if="selectedTags.length"
           class="chip chip--clear"
@@ -51,41 +53,77 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import BookmarkForm from "@/components/BookmarkForm.vue";
-import BookmarkList from "@/components/BookmarkList.vue";
-import { supabase } from "@/supabase/supabase";
+import { ref, onMounted, watch } from 'vue'
+import BookmarkForm from '@/components/BookmarkForm.vue'
+import BookmarkList from '@/components/BookmarkList.vue'
+import { supabase } from '@/supabase/supabase'
+import { useAppMode } from '@/session/appMode'
+
+const { isGuest } = useAppMode()
 
 // 検索
-const keyword = ref("");
-const tags = ref<string[]>([]);
-const selectedTags = ref<string[]>([]);
+const keyword = ref('')
+const tags = ref<string[]>([])
+const selectedTags = ref<string[]>([])
 
 // リスト更新フラグ
-const reloadFlag = ref(false);
-function refresh() {
-  reloadFlag.value = !reloadFlag.value;
-}
+const reloadFlag = ref(false)
 
-// タグON/OFF
+const SANDBOX_STORE_KEY = 'sandbox_bookmarks'
+
 function toggleTag(tag: string) {
-  const i = selectedTags.value.indexOf(tag);
-  if (i === -1) selectedTags.value.push(tag);
-  else selectedTags.value.splice(i, 1);
-}
-function clearTags() {
-  selectedTags.value = [];
+  const i = selectedTags.value.indexOf(tag)
+  if (i === -1) selectedTags.value.push(tag)
+  else selectedTags.value.splice(i, 1)
 }
 
-// 初回タグロード
-async function loadTags() {
-  const { data, error } = await supabase
-    .from("tags")
-    .select("name")
-    .order("name", { ascending: true });
-  if (!error && data) tags.value = data.map((t) => t.name);
+function clearTags() {
+  selectedTags.value = []
 }
-onMounted(loadTags);
+
+async function loadTags() {
+  if (isGuest.value) {
+    const stored = JSON.parse(localStorage.getItem(SANDBOX_STORE_KEY) || '[]')
+    const set = new Set<string>()
+    for (const b of stored) {
+      for (const t of (b?.tags || [])) {
+        if (typeof t === 'string' && t.trim()) set.add(t.trim())
+      }
+    }
+    tags.value = Array.from(set).sort((a, b) => a.localeCompare(b, 'ja'))
+    return
+  }
+
+  const { data, error } = await supabase
+    .from('tags')
+    .select('name')
+    .order('name', { ascending: true })
+
+  if (!error && data) {
+    tags.value = data.map((t: any) => t.name)
+  } else {
+    tags.value = []
+  }
+}
+
+async function refresh() {
+  // BookmarkList 側の再取得トリガ
+  reloadFlag.value = !reloadFlag.value
+  // タグ一覧も追随（追加/削除で変化するため）
+  await loadTags()
+}
+
+onMounted(loadTags)
+
+// モード切替（guest⇔auth）時もタグとフィルタを安定化
+watch(
+  () => isGuest.value,
+  async () => {
+    selectedTags.value = []
+    keyword.value = ''
+    await refresh()
+  }
+)
 </script>
 
 <style scoped>
@@ -94,65 +132,57 @@ onMounted(loadTags);
   margin: 2rem auto;
   padding: 0 1rem;
 }
+
 .section {
-  background: var(--bg-card);
+  background: var(--panel-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 1rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  color: var(--text-main);
-}
-.section__title {
-  position: relative;
-  padding-left: 1.5rem;
-}
-.section__title::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.2rem;
-  width: 0.25rem;
-  height: 1.2rem;
-  background: var(--accent-color);
-  border-radius: 2px;
+  margin-bottom: 1rem;
 }
 
-/* 検索 */
+.section__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
 .search {
   width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 0.75rem;
-  background: var(--bg-input);
-  color: var(--text-main);
+  padding: 0.65rem 0.75rem;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
 }
 
-/* チップ */
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-top: 0.75rem;
 }
+
 .chip {
-  padding: 0.25rem 0.75rem;
-  background: var(--tag-bg);
-  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
   cursor: pointer;
   user-select: none;
-  transition: background 0.2s;
 }
+
 .chip.active {
-  background: var(--tag-active-bg);
-  color: var(--tag-active-text);
+  background: #3399ff;
+  border-color: #3399ff;
+  color: #fff;
 }
+
 .chip--clear {
   background: transparent;
-  color: var(--accent-color);
-  border: none;
-  margin-left: auto;
+  border-style: dashed;
 }
 </style>
