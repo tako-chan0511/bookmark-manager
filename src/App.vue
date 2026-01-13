@@ -3,18 +3,27 @@
     <header class="app-header">
       <nav>
         <router-link to="/">Home</router-link>
-        <router-link v-if="!user" to="/login">Login</router-link>
+
+        <!-- guest(サンドボックス)は user なしでも Dashboard を使えるので Login 導線は残す -->
+        <router-link v-if="!user && !isGuest" to="/login">Login</router-link>
+
         <span v-else class="user-info">
-          <template v-if="isSandbox">🧪 サンドボックスモード</template>
-          <template v-else>ようこそ、{{ user.email }} さん</template>
-          <button @click="signOut">ログアウト</button>
+          <!-- ★ isSandbox → isGuest に統一 -->
+          <template v-if="isGuest">🧪 サンドボックスモード</template>
+          <template v-else>ようこそ、{{ user?.email }} さん</template>
+
+          <!-- ★ signOut 直呼びではなく、logout/leaveSandbox を使う -->
+          <button v-if="isGuest" @click="leaveSandbox">サンドボックス終了</button>
+          <button v-else @click="logout">ログアウト</button>
         </span>
+
         <!-- ダーク／ライト切り替え -->
         <button class="theme-toggle" @click="toggleTheme">
           {{ theme === 'light' ? '🌙 ダークモード' : '☀️ ライトモード' }}
         </button>
       </nav>
     </header>
+
     <main>
       <router-view />
     </main>
@@ -22,15 +31,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuth } from '@/supabase/useAuth'
+import { useAppMode } from '@/session/appMode'
 
+const router = useRouter()
 const { user, signOut } = useAuth()
-// サンドボックス用ダミーアカウント
-const sandboxEmail = 'hara.keisuke2@i.softbank.jp'
-const isSandbox = computed(() => user.value?.email === sandboxEmail)
+const { isGuest, exitGuest } = useAppMode()
 
-// テーマ管理
+const logout = async () => {
+  await signOut()
+  exitGuest() // 念のため guest を解除（混乱防止）
+  router.push({ name: 'Login' })
+}
+
+const leaveSandbox = () => {
+  exitGuest()
+  router.push({ name: 'Login' })
+}
+
+// テーマ管理（現状踏襲）
 const theme = ref(localStorage.getItem('theme') || 'light')
 watch(
   theme,
@@ -40,6 +61,7 @@ watch(
   },
   { immediate: true }
 )
+
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light'
 }
