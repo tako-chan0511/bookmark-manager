@@ -36,8 +36,13 @@ export function useAuth() {
   const signIn = (email: string, password: string) => {
     // サンドボックスモードチェック
     if (localStorage.getItem('sandbox_mode') === 'true') {
+      user.value = {
+        id: 'sandbox-user-' + Date.now(),
+        email: '🧪 Sandbox Mode',
+        user_metadata: {}
+      } as any
       return Promise.resolve({
-        data: { session: { user: { email } } },
+        data: { session: { user: user.value } },
         error: null
       } as any)
     }

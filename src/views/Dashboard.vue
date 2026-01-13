@@ -56,6 +56,9 @@ import BookmarkForm from "@/components/BookmarkForm.vue";
 import BookmarkList from "@/components/BookmarkList.vue";
 import { supabase } from "@/supabase/supabase";
 
+// サンドボックスモード判定
+const isSandbox = localStorage.getItem('sandbox_mode') === 'true'
+
 // 検索
 const keyword = ref("");
 const tags = ref<string[]>([]);
@@ -79,6 +82,19 @@ function clearTags() {
 
 // 初回タグロード
 async function loadTags() {
+  // サンドボックスモード時はローカルストレージからタグ抽出
+  if (isSandbox) {
+    const bookmarks = JSON.parse(localStorage.getItem('sandbox_bookmarks') || '[]')
+    const allTags = new Set<string>()
+    bookmarks.forEach((b: any) => {
+      if (b.tags && Array.isArray(b.tags)) {
+        b.tags.forEach((tag: string) => allTags.add(tag))
+      }
+    })
+    tags.value = Array.from(allTags).sort()
+    return
+  }
+
   const { data, error } = await supabase
     .from("tags")
     .select("name")
